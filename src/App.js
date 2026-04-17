@@ -311,8 +311,8 @@ const getSortedPOs = () => {
 
         if (!aMatch || !bMatch) return 0;
 
-        const [_, aW, aBay] = aMatch;
-        const [__, bW, bBay] = bMatch;
+        const [, aW, aBay] = aMatch;
+        const [, bW, bBay] = bMatch;
 
         if (aW !== bW) return aW.localeCompare(bW);
 
@@ -353,7 +353,7 @@ const getSortedPOs = () => {
   setLoading(true);
 
   try {
-    const normalizedSearch = locationSearch.toUpperCase();
+    // const normalizedSearch = locationSearch.toUpperCase();
 
     const results = activePOs.filter(p =>
   p.Status !== "Delivered" &&
