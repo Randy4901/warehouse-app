@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logo from "./logo.png";
 import { db } from "./firebase";
 import {
   doc,
@@ -391,7 +392,19 @@ const sectionRow = {
 };
 
 return (
-  <div style={pageStyle}>
+
+ <div style={pageStyle}>
+
+    <img
+      src={logo}
+      alt="Warehouse Logo"
+      style={{
+        width: "100%",
+        maxWidth: "500px",
+        display: "block",
+        margin: "0 auto 20px auto"
+      }}
+    />
 
     {/* SEARCH */}
     <div style={cardStyle}>
