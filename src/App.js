@@ -384,7 +384,9 @@ const pageStyle = {
   gap: "12px"
 };
 
-if (loading) {}
+if (loading) {
+  return <div>Loading...</div>;
+}
 
 return (
 
