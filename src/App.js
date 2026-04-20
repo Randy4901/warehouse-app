@@ -31,6 +31,7 @@ function App() {
   const [bayResults, setBayResults] = useState([]);
 
   const [loading, setLoading] = useState(false);
+
   const [sortMode, setSortMode] = useState("created");
 
   // ================= AUTO LOAD ACTIVE POs =================
@@ -110,8 +111,6 @@ function App() {
     };
   };
 
-  const formatLocation = (loc = "") =>
-  loc.toUpperCase().split(/[\s,]+/).filter(Boolean).join(",");
 
   // ================= SEARCH =================
 const handleSearch = async () => {
@@ -385,11 +384,7 @@ const pageStyle = {
   gap: "12px"
 };
 
-const sectionRow = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px"
-};
+if (loading) {}
 
 return (
 
