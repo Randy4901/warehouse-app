@@ -445,6 +445,7 @@ return (
                 <div><strong>PO:</strong> {p.id}</div>
                 <div><strong>Location:</strong> {p.Location}</div>
                 <div><strong>Status:</strong> {p.Status}</div>
+                <div><strong>Notes:</strong> {p.notes || "None"}</div>
               </div>
             ))
           )
