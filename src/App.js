@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import logo from "./logo.png";
 import { db } from "./firebase";
+import { deleteDoc } from "firebase/firestore";
 import {
   doc,
   getDoc,
@@ -373,6 +374,44 @@ const getSortedPOs = () => {
     setLoading(false);
   }
 };
+
+const handleDeletePO = async () => {
+  if (!newPO) return alert("Enter PO to delete");
+
+  const confirmDelete = window.confirm(
+    `Are you sure you want to DELETE PO ${newPO}? This cannot be undone.`
+  );
+
+  if (!confirmDelete) return;
+
+  setLoading(true);
+
+  try {
+    const normalizedPO = newPO.toUpperCase();
+    const ref = doc(db, "pos", normalizedPO);
+
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      return alert("PO not found");
+    }
+
+    await deleteDoc(ref);
+
+    alert(`PO ${normalizedPO} deleted`);
+
+    setNewPO("");
+
+    await fetchActivePOs();
+
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting PO");
+  } finally {
+    setLoading(false);
+  }
+};
+
   // ================= UI =================
 
 const pageStyle = {
@@ -504,9 +543,20 @@ return (
 </select>
 
         <div>
-          <button onClick={handleAddPO}>Add</button>
-          <button onClick={handleUpdatePO}>Update</button>
-        </div>
+  <button onClick={handleAddPO}>Add</button>
+  <button onClick={handleUpdatePO}>Update</button>
+
+  <button
+    style={{
+      marginLeft: 8,
+      background: "red",
+      color: "white"
+    }}
+    onClick={handleDeletePO}
+  >
+    Delete
+  </button>
+</div>
       </div>
     )}
 
