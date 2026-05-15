@@ -446,7 +446,15 @@ return (
     <div style={cardStyle}>
       <h2>Search PO</h2>
 
-      <input value={po} onChange={e => setPo(e.target.value)} />
+      <input
+  value={po}
+  onChange={e => setPo(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  }}
+/>
       <button onClick={handleSearch}>Search</button>
 
       {result && !result.error && (
@@ -465,11 +473,15 @@ return (
     <div style={cardStyle}>
       <h2>Bay Search</h2>
 
-      <input
-        value={locationSearch}
-        onChange={(e) => setLocationSearch(e.target.value)}
-      />
-
+    <input
+  value={locationSearch}
+  onChange={(e) => setLocationSearch(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      searchByLocation();
+    }
+  }}
+/>
       <button onClick={searchByLocation}>Search</button>
 
       <div style={{ marginTop: 10 }}>
@@ -499,11 +511,16 @@ return (
     <h2>Admin Login</h2>
 
     <input
-      type="password"
-      placeholder="Enter password"
-      value={adminPassword}
-      onChange={(e) => setAdminPassword(e.target.value)}
-    />
+  type="password"
+  placeholder="Enter password"
+  value={adminPassword}
+  onChange={(e) => setAdminPassword(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      handleAdminLogin();
+    }
+  }}
+/>
 
     <button style={{ marginLeft: 8 }} onClick={handleAdminLogin}>
       Login
@@ -523,7 +540,17 @@ return (
       <div style={cardStyle}>
         <h2>Admin</h2>
 
-        <input style={inputStyle} placeholder="PO" value={newPO} onChange={e => setNewPO(e.target.value)} />
+     <input
+  style={inputStyle}
+  placeholder="Location (e.g. A4 A5)"
+  value={newLocation}
+  onChange={(e) => setNewLocation(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      handleAddPO();
+    }
+  }}
+/>
 
         <input
           style={inputStyle}
