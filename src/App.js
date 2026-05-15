@@ -259,6 +259,30 @@ const handleUpdatePO = async () => {
   }
 };
 
+const loadPOIntoAdmin = async () => {
+  if (!newPO) return alert("Enter a PO");
+
+  try {
+    const normalizedPO = newPO.toUpperCase();
+    const ref = doc(db, "pos", normalizedPO);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      return alert("PO not found");
+    }
+
+    const data = snap.data();
+
+    setNewLocation(data.Location || "");
+    setNewStatus(data.Status || "Received");
+    setNewNotes(data.notes || "");
+
+  } catch (err) {
+    console.error(err);
+    alert("Error loading PO");
+  }
+};
+
   // ================= ACTIVE POS =================
 const fetchActivePOs = async () => {
   setLoading(true);
@@ -540,28 +564,42 @@ return (
       <div style={cardStyle}>
         <h2>Admin</h2>
 
-     <input
+{/* PO INPUT (MISSING RIGHT NOW) */}
+<input
   style={inputStyle}
-  placeholder="Location (e.g. A4 A5)"
-  value={newLocation}
-  onChange={(e) => setNewLocation(e.target.value)}
+  placeholder="PO"
+  value={newPO}
+  onChange={(e) => setNewPO(e.target.value)}
   onKeyDown={(e) => {
     if (e.key === "Enter") {
-      handleAddPO();
+      loadPOIntoAdmin();
     }
   }}
 />
 
-        <input
-          style={inputStyle}
-          placeholder="Location (e.g. A4 A5)"
-          value={newLocation}
-          onChange={(e) => setNewLocation(e.target.value)}
-        />
+{/* LOAD BUTTON (optional but useful) */}
+<button onClick={loadPOIntoAdmin}>
+  Load PO
+</button>
 
-        <input style={inputStyle} placeholder="Notes" value={newNotes} onChange={e => setNewNotes(e.target.value)} />
+{/* LOCATION */}
+<input
+  style={inputStyle}
+  placeholder="Location (e.g. A4 A5)"
+  value={newLocation}
+  onChange={(e) => setNewLocation(e.target.value)}
+/>
 
-        <select value={newStatus} onChange={e => setNewStatus(e.target.value)}>
+{/* NOTES */}
+<input
+  style={inputStyle}
+  placeholder="Notes"
+  value={newNotes}
+  onChange={(e) => setNewNotes(e.target.value)}
+/>
+
+{/* STATUS */}
+<select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
   <option>Received</option>
   <option>Partially Received</option>
   <option>Partially Delivered</option>
