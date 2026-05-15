@@ -39,6 +39,32 @@ function App() {
   useEffect(() => {
     fetchActivePOs();
   }, []);
+  useEffect(() => {
+  const autoLoadPO = async () => {
+    if (!newPO.trim()) return;
+
+    try {
+      const normalizedPO = newPO.toUpperCase();
+      const ref = doc(db, "pos", normalizedPO);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        return;
+      }
+
+      const data = snap.data();
+
+      setNewLocation(data.Location || "");
+      setNewStatus(data.Status || "Received");
+      setNewNotes(data.notes || "");
+
+    } catch (err) {
+      console.error("Auto-load error:", err);
+    }
+  };
+
+  autoLoadPO();
+}, [newPO]);
 
   // ================= STYLE =================
   const cardStyle = {
@@ -570,18 +596,7 @@ return (
   placeholder="PO"
   value={newPO}
   onChange={(e) => setNewPO(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      loadPOIntoAdmin();
-    }
-  }}
 />
-
-{/* LOAD BUTTON (optional but useful) */}
-<button onClick={loadPOIntoAdmin}>
-  Load PO
-</button>
-
 {/* LOCATION */}
 <input
   style={inputStyle}
