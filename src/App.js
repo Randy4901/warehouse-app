@@ -16,7 +16,7 @@ function App() {
   // ================= STATE =================
   const [po, setPo] = useState("");
   const [result, setResult] = useState(null);
-
+  const [poExists, setPoExists] = useState(false);
   const [newPO, setNewPO] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newStatus, setNewStatus] = useState("Received");
@@ -40,20 +40,29 @@ function App() {
     fetchActivePOs();
   }, []);
   useEffect(() => {
-  const autoLoadPO = async () => {
-    if (!newPO.trim()) return;
+  if (!newPO.trim()) return;
 
+  const timer = setTimeout(async () => {
     try {
       const normalizedPO = newPO.toUpperCase();
+
       const ref = doc(db, "pos", normalizedPO);
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
+        setPoExists(false);
+
+        setNewLocation("");
+        setNewNotes("");
+        setNewStatus("Received");
+
         return;
       }
 
       const data = snap.data();
 
+      setPoExists(true);
+      
       setNewLocation(data.Location || "");
       setNewStatus(data.Status || "Received");
       setNewNotes(data.notes || "");
@@ -61,9 +70,10 @@ function App() {
     } catch (err) {
       console.error("Auto-load error:", err);
     }
-  };
+  }, 500);
 
-  autoLoadPO();
+  return () => clearTimeout(timer);
+
 }, [newPO]);
 
   // ================= STYLE =================
