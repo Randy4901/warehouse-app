@@ -285,30 +285,6 @@ const handleUpdatePO = async () => {
   }
 };
 
-const loadPOIntoAdmin = async () => {
-  if (!newPO) return alert("Enter a PO");
-
-  try {
-    const normalizedPO = newPO.toUpperCase();
-    const ref = doc(db, "pos", normalizedPO);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-      return alert("PO not found");
-    }
-
-    const data = snap.data();
-
-    setNewLocation(data.Location || "");
-    setNewStatus(data.Status || "Received");
-    setNewNotes(data.notes || "");
-
-  } catch (err) {
-    console.error(err);
-    alert("Error loading PO");
-  }
-};
-
   // ================= ACTIVE POS =================
 const fetchActivePOs = async () => {
   setLoading(true);
