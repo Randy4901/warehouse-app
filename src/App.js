@@ -249,7 +249,7 @@ const handleUpdatePO = async () => {
   if (!newPO) return alert("Enter PO in Admin Panel");
 
   try {
-    const ref = doc(db, "pos", newPO);
+    const ref = doc(db, "pos", newPO.toUpperCase());
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
