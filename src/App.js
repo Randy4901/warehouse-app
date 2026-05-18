@@ -583,6 +583,19 @@ return (
   value={newPO}
   onChange={(e) => setNewPO(e.target.value)}
 />
+<div style={{ marginTop: 5, fontWeight: "bold" }}>
+  {newPO && (
+    poExists ? (
+      <span style={{ color: "orange" }}>
+        Existing PO Loaded
+      </span>
+    ) : (
+      <span style={{ color: "green" }}>
+        New PO
+      </span>
+    )
+  )}
+</div>
 {/* LOCATION */}
 <input
   style={inputStyle}
@@ -609,8 +622,18 @@ return (
 </select>
 
         <div>
-  <button onClick={handleAddPO}>Add</button>
-  <button onClick={handleUpdatePO}>Update</button>
+  <button
+    onClick={handleAddPO}
+    disabled={poExists}
+  >
+  Add
+  </button>
+  <button
+  onClick={handleUpdatePO}
+  disabled={!poExists}
+  >
+  Update
+  </button>
 
   <button
     style={{
