@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import logo from "./logo.png";
 import { db } from "./firebase";
 import { deleteDoc } from "firebase/firestore";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   doc,
   getDoc,
@@ -164,7 +166,7 @@ const handleSearch = async () => {
     snap = await getDoc(doc(db, "pos", normalizedPO));
   } catch (err) {
     console.error(err);
-    alert("Error fetching PO");
+    toast.error("Error fetching PO");
     setLoading(false);
     return; // 🚨 IMPORTANT
   }
@@ -196,7 +198,7 @@ const handleSearch = async () => {
   // ================= ADD =================
 const handleAddPO = async () => {
   if (!newPO || !newLocation) {
-    alert("Fill all fields");
+    toast.warning("Fill all fields");
     return;
   }
 
@@ -212,17 +214,19 @@ const handleAddPO = async () => {
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
-      alert("Duplicate PO");
+      toast.warning("Duplicate PO");
       return;
     }
 
     await setDoc(ref, {
-      Location: formattedLocation,
-      Status: newStatus,
-      notes: newNotes,
-      createdAt: serverTimestamp(),
-      lastUpdated: serverTimestamp()
-    });
+  Location: formattedLocation,
+  Status: newStatus,
+  notes: newNotes,
+  createdAt: serverTimestamp(),
+  lastUpdated: serverTimestamp()
+});
+
+toast.success("PO Added");
 
     // ✅ clear form AFTER success
     setNewPO("");
@@ -234,7 +238,7 @@ const handleAddPO = async () => {
 
   } catch (err) {
     console.error(err);
-    alert("Error adding PO");
+    toast.error("Error adding PO");
   } finally {
     setLoading(false);
   }
@@ -244,7 +248,7 @@ const handleAdminLogin = () => {
     setIsAdmin(true);
     setAdminPassword("");
   } else {
-    alert("Incorrect password");
+    toast.error("Incorrect password");
   }
 };
 
@@ -255,10 +259,10 @@ const handleUpdatePO = async () => {
   !newStatus &&
   !newNotes.trim()
 ) {
-  return alert("No changes to update");
+  return toast.info("No changes to update");
 }
 
-  if (!newPO) return alert("Enter PO in Admin Panel");
+  if (!newPO) return toast.warning("Enter PO in Admin Panel");
 
   try {
     const normalizedPO = normalizePO(newPO);
@@ -266,7 +270,7 @@ const handleUpdatePO = async () => {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      return alert("PO not found in database");
+      return toast.error("PO not found in database");
     }
 
     const updateData = {
@@ -283,7 +287,7 @@ const handleUpdatePO = async () => {
 
     await updateDoc(ref, updateData);
 
-    alert("PO Updated");
+    toast.success("PO Updated");
 
     // optional cleanup (keeps admin ready for next edit)
     setNewLocation("");
@@ -293,9 +297,9 @@ const handleUpdatePO = async () => {
     await fetchActivePOs();
 
   } catch (error) {
-    console.error("Update error:", error);
-    alert("Error updating PO");
-  }
+  console.error("Update error:", error);
+  toast.error("Error updating PO");
+}
 };
 
   // ================= ACTIVE POS =================
@@ -326,7 +330,7 @@ const fetchActivePOs = async () => {
 
   } catch (err) {
     console.error(err);
-    alert("Error loading active POs");
+    toast.error("Error loading active POs");
   } finally {
     setLoading(false);
   }
@@ -408,14 +412,14 @@ const getSortedPOs = () => {
 
   } catch (err) {
     console.error(err);
-    alert("Error searching location");
+    toast.error("Error searching location");
   } finally {
     setLoading(false);
   }
 };
 
 const handleDeletePO = async () => {
-  if (!newPO) return alert("Enter PO to delete");
+  if (!newPO) return toast.warning("Enter PO to delete");
 
   const confirmDelete = window.confirm(
     `Are you sure you want to DELETE PO ${newPO}? This cannot be undone.`
@@ -432,12 +436,12 @@ const handleDeletePO = async () => {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      return alert("PO not found");
+      return toast.info("PO not found");
     }
 
     await deleteDoc(ref);
 
-    alert(`PO ${normalizedPO} deleted`);
+    toast.success(`PO ${normalizedPO} deleted`);
 
     setNewPO("");
 
@@ -445,7 +449,7 @@ const handleDeletePO = async () => {
 
   } catch (err) {
     console.error(err);
-    alert("Error deleting PO");
+    toast.error("Error deleting PO");
   } finally {
     setLoading(false);
   }
@@ -487,6 +491,16 @@ const loadingBoxStyle = {
 return (
 
  <div style={pageStyle}>
+
+  <ToastContainer
+  position="top-center"
+  autoClose={2500}
+  hideProgressBar={false}
+  newestOnTop
+  closeOnClick
+  pauseOnHover
+  theme="colored"
+/>
 
   {loading && (
   <div style={loadingOverlayStyle}>
