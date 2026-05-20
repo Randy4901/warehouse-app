@@ -35,6 +35,8 @@ function App() {
 
   const [sortMode, setSortMode] = useState("created");
 
+  const normalizePO = (value = "") => value.trim().toUpperCase();
+
   // ================= AUTO LOAD ACTIVE POs =================
   useEffect(() => {
     fetchActivePOs();
@@ -44,7 +46,7 @@ function App() {
 
   const timer = setTimeout(async () => {
     try {
-      const normalizedPO = newPO.toUpperCase();
+      const normalizedPO = normalizePO(newPO);
 
       const ref = doc(db, "pos", normalizedPO);
       const snap = await getDoc(ref);
@@ -158,7 +160,7 @@ const handleSearch = async () => {
   let snap;
 
   try {
-    const normalizedPO = po.toUpperCase();
+    const normalizedPO = normalizePO(po);
     snap = await getDoc(doc(db, "pos", normalizedPO));
   } catch (err) {
     console.error(err);
@@ -201,7 +203,7 @@ const handleAddPO = async () => {
   setLoading(true);
 
   try {
-    const normalizedPO = newPO.toUpperCase();
+    const normalizedPO = normalizePO(newPO);
     const formattedLocation = newLocation
       .toUpperCase()
       .replace(/\s+/g, ",");
@@ -259,7 +261,8 @@ const handleUpdatePO = async () => {
   if (!newPO) return alert("Enter PO in Admin Panel");
 
   try {
-    const ref = doc(db, "pos", newPO.toUpperCase());
+    const normalizedPO = normalizePO(newPO);
+    const ref = doc(db, "pos", normalizedPO);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
@@ -423,7 +426,7 @@ const handleDeletePO = async () => {
   setLoading(true);
 
   try {
-    const normalizedPO = newPO.toUpperCase();
+    const normalizedPO = normalizePO(newPO);
     const ref = doc(db, "pos", normalizedPO);
 
     const snap = await getDoc(ref);
@@ -459,13 +462,39 @@ const pageStyle = {
   gap: "12px"
 };
 
-if (loading) {
-  return <div>Loading...</div>;
-}
+const loadingOverlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.35)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 9999
+};
+
+const loadingBoxStyle = {
+  background: "white",
+  padding: "20px 30px",
+  borderRadius: "10px",
+  fontSize: "18px",
+  fontWeight: "bold",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+};
 
 return (
 
  <div style={pageStyle}>
+
+  {loading && (
+  <div style={loadingOverlayStyle}>
+    <div style={loadingBoxStyle}>
+      Loading...
+    </div>
+  </div>
+)}
 
     <img
       src={logo}
