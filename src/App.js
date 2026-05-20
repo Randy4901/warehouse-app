@@ -36,6 +36,7 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const [sortMode, setSortMode] = useState("created");
+  const [quickLocation, setQuickLocation] = useState("");
 
   const normalizePO = (value = "") => value.trim().toUpperCase();
 
@@ -391,6 +392,18 @@ const getSortedPOs = () => {
 };
 
   // ================= BAY SEARCH =================
+  const QUICK_LOCATIONS = {
+  "Builders Stock": "BS",
+  "Tyler Merry": "TM",
+  "Ron Fricke": "RF",
+  "Shad Hemminger": "SH",
+  "Dustin Merry": "DM",
+  "Chan Merry": "CM",
+  "Mark Aksamit": "MA",
+  "Mike Folkerts": "MF",
+  "Bone Pile": "BONEPILE"
+};
+
   const searchByLocation = async () => {
   if (!locationSearch.trim()) return;
 
@@ -415,6 +428,29 @@ const getSortedPOs = () => {
     toast.error("Error searching location");
   } finally {
     setLoading(false);
+  }
+};
+
+const handleQuickLocationSearch = (value) => {
+  setQuickLocation(value);
+
+  if (!value) {
+    setBayResults([]);
+    return;
+  }
+
+  const code = QUICK_LOCATIONS[value];
+
+  const results = activePOs.filter(
+    (p) =>
+      p.Status !== "Delivered" &&
+      parseLocations(p.Location).includes(code)
+  );
+
+  if (results.length === 0) {
+    setBayResults([{ open: true }]);
+  } else {
+    setBayResults(results);
   }
 };
 
@@ -549,6 +585,21 @@ return (
    
 
     {/* BAY SEARCH */}
+    <div style={{ marginBottom: 10 }}>
+  <select
+    value={quickLocation}
+    onChange={(e) => handleQuickLocationSearch(e.target.value)}
+  >
+    <option value="">Quick Location Search</option>
+
+    {Object.keys(QUICK_LOCATIONS).map((name) => (
+      <option key={name} value={name}>
+        {name}
+      </option>
+    ))}
+  </select>
+</div>
+
     <div style={cardStyle}>
       <h2>Bay Search</h2>
 
@@ -567,7 +618,11 @@ return (
         {bayResults.length === 0 ? null : (
           bayResults.length === 1 && bayResults[0]?.open ? (
             <div style={{ fontWeight: "bold", color: "green" }}>
-              Open Bay ({locationSearch.toUpperCase()})
+              Open Bay (
+               {quickLocation
+                ? QUICK_LOCATIONS[quickLocation]
+                 : locationSearch.toUpperCase()}
+              )
             </div>
           ) : (
             bayResults.map((p) => (
