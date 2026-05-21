@@ -11,9 +11,11 @@ import {
   updateDoc,
   serverTimestamp,
   collection,
-  getDocs
+  getDocs,
+  query,
+  orderBy,
+  limit
 } from "firebase/firestore";
-
 function App() {
   // ================= STATE =================
   const [po, setPo] = useState("");
@@ -23,29 +25,59 @@ function App() {
   const [newLocation, setNewLocation] = useState("");
   const [newStatus, setNewStatus] = useState("Received");
   const [newNotes, setNewNotes] = useState("");
-
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
-
+  const [recentUpdates, setRecentUpdates] = useState([]);
   const [activePOs, setActivePOs] = useState([]);
   const [showActivePOs, setShowActivePOs] = useState(false);
-
   const [locationSearch, setLocationSearch] = useState("");
   const [bayResults, setBayResults] = useState([]);
-
   const [loading, setLoading] = useState(false);
-
   const [sortMode, setSortMode] = useState("created");
   const [quickLocation, setQuickLocation] = useState("");
-
   const normalizePO = (value = "") => value.trim().toUpperCase();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+ const fetchRecentUpdates = async () => {
+  try {
+    const q = query(
+      collection(db, "pos"),
+      orderBy("lastUpdated", "desc"),
+      limit(5)
+    );
+
+    const snap = await getDocs(q);
+
+    const data = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    setRecentUpdates(data);
+
+  } catch (err) {
+    console.error("Recent updates error:", err);
+    toast.error("Error loading recent updates");
+  }
+};
 
   // ================= AUTO LOAD ACTIVE POs =================
-  useEffect(() => {
-    fetchActivePOs();
-  }, []);
-  useEffect(() => {
-  if (!newPO.trim()) return;
+useEffect(() => {
+  fetchActivePOs();
+  fetchRecentUpdates();
+}, []);
+
+useEffect(() => {
+  if (!newPO.trim()) {
+    setPoExists(false);
+    return;
+  }
 
   const timer = setTimeout(async () => {
     try {
@@ -67,7 +99,7 @@ function App() {
       const data = snap.data();
 
       setPoExists(true);
-      
+
       setNewLocation(data.Location || "");
       setNewStatus(data.Status || "Received");
       setNewNotes(data.notes || "");
@@ -83,18 +115,37 @@ function App() {
 
   // ================= STYLE =================
   const cardStyle = {
-    background: "#fff",
-    padding: "12px",
-    marginTop: "10px",
-    borderRadius: "8px",
-    border: "1px solid #ddd"
-  };
+  background: "#fff",
+  padding: isMobile ? "16px" : "12px",
+  marginTop: "10px",
+  borderRadius: "8px",
+  border: "1px solid #ddd"
+};
 
-  const inputStyle = {
-    padding: "8px",
-    marginRight: "8px",
-    marginTop: "5px"
-  };
+const inputStyle = {
+  padding: isMobile ? "12px" : "8px",
+  marginRight: isMobile ? "0" : "8px",
+  marginTop: "5px",
+  width: isMobile ? "100%" : "auto",
+  boxSizing: "border-box",
+  fontSize: isMobile ? "16px" : "14px"
+};
+
+const buttonStyle = {
+  padding: isMobile ? "14px 16px" : "8px 12px",
+  minHeight: "44px",
+  width: isMobile ? "100%" : "auto",
+  marginTop: isMobile ? "8px" : "0"
+};
+
+const stickyStyle = {
+  position: "sticky",
+  top: 0,
+  zIndex: 1000,
+  background: "#f4f6f8",
+  paddingTop: "8px",
+  paddingBottom: "8px"
+};
 
   // ================= WAREHOUSE MAP =================
   const WAREHOUSE_BAYS = {
@@ -216,6 +267,7 @@ const handleAddPO = async () => {
 
     if (snap.exists()) {
       toast.warning("Duplicate PO");
+      setLoading(false);
       return;
     }
 
@@ -236,6 +288,7 @@ toast.success("PO Added");
     setNewNotes("");
 
     await fetchActivePOs();
+    await fetchRecentUpdates();
 
   } catch (err) {
     console.error(err);
@@ -244,15 +297,40 @@ toast.success("PO Added");
     setLoading(false);
   }
 };
-const handleAdminLogin = () => {
-  if (adminPassword === "warehouse4901") {
-    setIsAdmin(true);
-    setAdminPassword("");
-  } else {
-    toast.error("Incorrect password");
+const handleAdminLogin = async () => {
+  if (!adminPassword.trim()) {
+    return toast.warning("Enter password");
+  }
+
+  setLoading(true);
+
+  try {
+    const ref = doc(db, "settings", "admin");
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      toast.error("Admin config missing");
+      setLoading(false);
+      return;
+    }
+
+    const data = snap.data();
+
+    if (adminPassword === data.password) {
+      setIsAdmin(true);
+      setAdminPassword("");
+      toast.success("Admin access granted");
+    } else {
+      toast.error("Incorrect password");
+    }
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Login error");
+  } finally {
+    setLoading(false);
   }
 };
-
   // ================= UPDATE =================
 const handleUpdatePO = async () => {
   if (
@@ -296,6 +374,7 @@ const handleUpdatePO = async () => {
 
     // refresh warehouse view
     await fetchActivePOs();
+    await fetchRecentUpdates();
 
   } catch (error) {
   console.error("Update error:", error);
@@ -558,19 +637,25 @@ return (
     />
 
     {/* SEARCH */}
-    <div style={cardStyle}>
+    <div style={{ ...cardStyle, ...stickyStyle }}>
       <h2>Search PO</h2>
 
       <input
-  value={po}
-  onChange={e => setPo(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  }}
-/>
-      <button onClick={handleSearch}>Search</button>
+        style={inputStyle}
+        value={po}
+        onChange={e => setPo(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleSearch();
+          }
+        }}
+      />
+      <button
+        style={buttonStyle}
+        onClick={handleSearch}
+      >
+        Search
+      </button>
 
       {result && !result.error && (
         <div>
@@ -587,6 +672,7 @@ return (
     {/* BAY SEARCH */}
     <div style={{ marginBottom: 10 }}>
   <select
+    style={inputStyle}
     value={quickLocation}
     onChange={(e) => handleQuickLocationSearch(e.target.value)}
   >
@@ -604,15 +690,18 @@ return (
       <h2>Bay Search</h2>
 
     <input
-  value={locationSearch}
-  onChange={(e) => setLocationSearch(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      searchByLocation();
-    }
-  }}
-/>
-      <button onClick={searchByLocation}>Search</button>
+      style={inputStyle}
+      value={locationSearch}
+      onChange={(e) => setLocationSearch(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          searchByLocation();
+          }
+        }}
+    />
+      <button 
+      style={buttonStyle}
+      onClick={searchByLocation}>Search</button>
 
       <div style={{ marginTop: 10 }}>
         {bayResults.length === 0 ? null : (
@@ -645,6 +734,7 @@ return (
     <h2>Admin Login</h2>
 
     <input
+  style={inputStyle}
   type="password"
   placeholder="Enter password"
   value={adminPassword}
@@ -656,17 +746,26 @@ return (
   }}
 />
 
-    <button style={{ marginLeft: 8 }} onClick={handleAdminLogin}>
+  <button
+    style={{
+      ...buttonStyle,
+      marginLeft: isMobile ? 0 : 8
+    }}
+    onClick={handleAdminLogin}
+  >
       Login
     </button>
   </div>
 ) : (
   <button
-    style={{ marginTop: 10 }}
-    onClick={() => setIsAdmin(false)}
-  >
-    Exit Admin Mode
-  </button>
+  style={{
+    ...buttonStyle,
+    marginTop: 10
+  }}
+  onClick={() => setIsAdmin(false)}
+>
+  Exit Admin Mode
+</button>
 )}
 
     {/* ADMIN */}
@@ -711,7 +810,8 @@ return (
 />
 
 {/* STATUS */}
-<select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+<select 
+ style={inputStyle} value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
   <option>Received</option>
   <option>Partially Received</option>
   <option>Partially Delivered</option>
@@ -721,12 +821,14 @@ return (
 
         <div>
   <button
+    style={buttonStyle}
     onClick={handleAddPO}
     disabled={poExists}
   >
   Add
   </button>
   <button
+  style={buttonStyle}
   onClick={handleUpdatePO}
   disabled={!poExists}
   >
@@ -734,15 +836,16 @@ return (
   </button>
 
   <button
-    style={{
-      marginLeft: 8,
-      background: "red",
-      color: "white"
-    }}
-    onClick={handleDeletePO}
-  >
-    Delete
-  </button>
+  style={{
+    ...buttonStyle,
+    marginLeft: isMobile ? 0 : 8,
+    background: "red",
+    color: "white"
+  }}
+  onClick={handleDeletePO}
+>
+  Delete
+</button>
 </div>
       </div>
     )}
@@ -756,23 +859,27 @@ return (
   </div>
 
   <button
-    style={{ marginTop: 10 }}
-    onClick={() => {
-      if (showActivePOs) {
-        setShowActivePOs(false);
-      } else {
-        fetchActivePOs();
-        setShowActivePOs(true);
-      }
-    }}
-  >
-    {showActivePOs ? "Hide Active POs" : "Show Active POs"}
-  </button>
+  style={{
+    ...buttonStyle,
+    marginTop: 10
+  }}
+  onClick={() => {
+    if (showActivePOs) {
+      setShowActivePOs(false);
+    } else {
+      fetchActivePOs();
+      setShowActivePOs(true);
+    }
+  }}
+>
+  {showActivePOs ? "Hide Active POs" : "Show Active POs"}
+</button>
   {/* SORT DROPDOWN */}
 <div style={{ marginTop: 10 }}>
   <label style={{ marginRight: 8 }}>Sort:</label>
 
   <select
+    style={inputStyle}
     value={sortMode}
     onChange={(e) => setSortMode(e.target.value)}
   >
@@ -794,6 +901,42 @@ return (
   </div>
 )}
 
+</div>
+
+{/* RECENTLY UPDATED */}
+<div style={cardStyle}>
+  <h2>Recently Updated POs</h2>
+
+  {recentUpdates.length === 0 ? (
+    <div>No recent updates</div>
+  ) : (
+    recentUpdates.map((p) => (
+      <div
+        key={p.id}
+        style={{
+          ...cardStyle,
+          marginTop: 8
+        }}
+      >
+        <div><strong>PO:</strong> {p.id}</div>
+
+        <div>
+          <strong>Location:</strong>{" "}
+          {p.Location || "N/A"}
+        </div>
+
+        <div>
+          <strong>Status:</strong>{" "}
+          {p.Status || "N/A"}
+        </div>
+
+        <div>
+          <strong>Updated:</strong>{" "}
+          {p.lastUpdated?.toDate?.().toLocaleString() || "N/A"}
+        </div>
+      </div>
+    ))
+  )}
 </div>
 
     {/* CAPACITY */}
