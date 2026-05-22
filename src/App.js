@@ -14,6 +14,7 @@ import {
   getDocs,
   query,
   orderBy,
+  arrayUnion,
   limit
 } from "firebase/firestore";
 function App() {
@@ -69,8 +70,13 @@ function App() {
 
   // ================= AUTO LOAD ACTIVE POs =================
 useEffect(() => {
+
+  cleanupOldDeliveredPOs();
+
   fetchActivePOs();
+
   fetchRecentUpdates();
+
 }, []);
 
 useEffect(() => {
@@ -224,13 +230,14 @@ const handleSearch = async () => {
   }
 
   if (!snap.exists()) {
-    setResult({
-      Location: "N/A",
-      Status: "Not Yet Received",
-      Notes: "No record in system",
-      createdAt: "N/A",
-      lastUpdated: "N/A"
-    });
+  setResult({
+    Location: "N/A",
+    Status: "Not Yet Received",
+    Notes: "No record in system",
+    createdAt: "N/A",
+    lastUpdated: "N/A",
+    history: []
+  });
     setLoading(false);
     return;
   }
@@ -242,7 +249,8 @@ const handleSearch = async () => {
     Status: r.Status,
     Notes: r.notes || "None",
     createdAt: r.createdAt?.toDate?.().toLocaleString() || "N/A",
-    lastUpdated: r.lastUpdated?.toDate?.().toLocaleString() || "N/A"
+    lastUpdated: r.lastUpdated?.toDate?.().toLocaleString() || "N/A",
+    history: r.history || []
   });
 
   setLoading(false);
@@ -271,13 +279,22 @@ const handleAddPO = async () => {
       return;
     }
 
-    await setDoc(ref, {
-  Location: formattedLocation,
-  Status: newStatus,
-  notes: newNotes,
-  createdAt: serverTimestamp(),
-  lastUpdated: serverTimestamp()
-});
+  await setDoc(ref, {
+    Location: formattedLocation,
+    Status: newStatus,
+    notes: newNotes,
+
+    createdAt: serverTimestamp(),
+    lastUpdated: serverTimestamp(),
+
+    history: [
+      {
+        location: formattedLocation,
+        status: newStatus,
+        timestamp: new Date()
+      }
+    ]
+  });
 
 toast.success("PO Added");
 
@@ -355,7 +372,16 @@ const handleUpdatePO = async () => {
     const updateData = {
       Status: newStatus,
       notes: newNotes,
-      lastUpdated: serverTimestamp()
+      lastUpdated: serverTimestamp(),
+
+      history: arrayUnion({
+        location: newLocation.trim()
+          ? newLocation.toUpperCase().replace(/\s+/g, ",")
+          : snap.data().Location,
+
+        status: newStatus,
+        timestamp: serverTimestamp()
+      })
     };
 
     if (newLocation.trim()) {
@@ -413,6 +439,49 @@ const fetchActivePOs = async () => {
     toast.error("Error loading active POs");
   } finally {
     setLoading(false);
+  }
+};
+
+const cleanupOldDeliveredPOs = async () => {
+  try {
+    const snap = await getDocs(collection(db, "pos"));
+
+    const now = new Date();
+
+    for (const d of snap.docs) {
+      const data = d.data();
+
+      // ONLY delivered POs
+      if (data.Status !== "Delivered") continue;
+
+      // Must have lastUpdated timestamp
+      if (!data.lastUpdated?.toDate) continue;
+
+      const updatedDate = data.lastUpdated.toDate();
+
+      // Calculate age in milliseconds
+      const age =
+        now.getTime() - updatedDate.getTime();
+
+      // 1 year
+      const oneYear =
+        365 * 24 * 60 * 60 * 1000;
+
+      // Delete if older than 1 year
+      if (age > oneYear) {
+        await deleteDoc(doc(db, "pos", d.id));
+
+        console.log(
+          `Deleted old PO: ${d.id}`
+        );
+      }
+    }
+
+  } catch (err) {
+    console.error(
+      "Cleanup old delivered POs error:",
+      err
+    );
   }
 };
 
@@ -663,6 +732,33 @@ return (
           <div>Status: {result.Status}</div>
           <div>Notes: {result.Notes}</div>
           <div>Updated: {result.lastUpdated}</div>
+            {result.history?.length > 0 && (
+  <div style={{ marginTop: 10 }}>
+    <strong>History:</strong>
+
+    {result.history.map((h, index) => (
+      <div
+        key={index}
+        style={{
+          marginTop: 5,
+          padding: 6,
+          border: "1px solid #ddd",
+          borderRadius: 4
+        }}
+      >
+        <div>Location: {h.location}</div>
+        <div>Status: {h.status}</div>
+        <div>
+          Time: {
+            h.timestamp?.toDate
+              ? h.timestamp.toDate().toLocaleString()
+              : "N/A"
+          }
+        </div>
+      </div>
+    ))}
+  </div>
+)}
         </div>
       )}
     </div>
