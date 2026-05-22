@@ -380,7 +380,7 @@ const handleUpdatePO = async () => {
           : snap.data().Location,
 
         status: newStatus,
-        timestamp: serverTimestamp()
+        timestamp: new Date()
       })
     };
 
