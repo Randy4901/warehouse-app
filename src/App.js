@@ -177,7 +177,7 @@ const stickyStyle = {
     if (!p.LocationList) return;
 
     p.LocationList.forEach((loc) => {
-      const match = loc.match(/([A-D])(\d+)/);
+      const match = loc.trim().match(/^([A-D])(\d+)$/);
       if (!match) return;
 
       const w = match[1];
@@ -421,6 +421,7 @@ const fetchActivePOs = async () => {
       const locationList = (raw.Location || "")
         .toUpperCase()
         .split(/[\s,]+/)
+        .map(loc => loc.trim())
         .filter(Boolean);
 
       return {
