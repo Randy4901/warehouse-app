@@ -15,7 +15,9 @@ import {
   query,
   orderBy,
   arrayUnion,
-  limit
+  limit,
+  where,
+  writeBatch
 } from "firebase/firestore";
 function App() {
   // ================= STATE =================
@@ -70,8 +72,6 @@ function App() {
 
   // ================= AUTO LOAD ACTIVE POs =================
 useEffect(() => {
-
-  cleanupOldDeliveredPOs();
 
   fetchActivePOs();
 
@@ -444,48 +444,56 @@ const fetchActivePOs = async () => {
 };
 
 const cleanupOldDeliveredPOs = async () => {
+  const confirmCleanup = window.confirm(
+    "Delete all delivered POs that have not been updated in over one year?"
+  );
+
+  if (!confirmCleanup) return;
+
+  setLoading(true);
+
   try {
-    const snap = await getDocs(collection(db, "pos"));
+    // Create a date exactly one year ago
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
 
-    const now = new Date();
+    // Retrieve only delivered POs older than the cutoff date
+    const oldDeliveredQuery = query(
+      collection(db, "pos"),
+      where("Status", "==", "Delivered"),
+      where("lastUpdated", "<", cutoffDate),
+      limit(400)
+    );
 
-    for (const d of snap.docs) {
-      const data = d.data();
+    const snap = await getDocs(oldDeliveredQuery);
 
-      // ONLY delivered POs
-      if (data.Status !== "Delivered") continue;
-
-      // Must have lastUpdated timestamp
-      if (!data.lastUpdated?.toDate) continue;
-
-      const updatedDate = data.lastUpdated.toDate();
-
-      // Calculate age in milliseconds
-      const age =
-        now.getTime() - updatedDate.getTime();
-
-      // 1 year
-      const oneYear =
-        365 * 24 * 60 * 60 * 1000;
-
-      // Delete if older than 1 year
-      if (age > oneYear) {
-        await deleteDoc(doc(db, "pos", d.id));
-
-        console.log(
-          `Deleted old PO: ${d.id}`
-        );
-      }
+    if (snap.empty) {
+      toast.info("No old delivered POs found");
+      return;
     }
 
+    // Group the deletes into one Firestore batch
+    const batch = writeBatch(db);
+
+    snap.docs.forEach((poDocument) => {
+      batch.delete(poDocument.ref);
+    });
+
+    // Perform all deletes
+    await batch.commit();
+
+    toast.success(`${snap.size} old delivered POs deleted`);
+
+    // Refresh the displays after cleanup
+    await fetchActivePOs();
+    await fetchRecentUpdates();
   } catch (err) {
-    console.error(
-      "Cleanup old delivered POs error:",
-      err
-    );
+    console.error("Cleanup old delivered POs error:", err);
+    toast.error("Error cleaning up old delivered POs");
+  } finally {
+    setLoading(false);
   }
 };
-
 const getSortedPOs = () => {
   const sorted = [...activePOs];
 
@@ -942,6 +950,22 @@ return (
   onClick={handleDeletePO}
 >
   Delete
+</button>
+</div>
+
+<div style={{ marginTop: 20 }}>
+  <button
+  type="button"
+  disabled={loading}
+  style={{
+    ...buttonStyle,
+    background: "#555",
+    color: "white",
+    marginLeft: isMobile ? 0 : 8
+  }}
+  onClick={cleanupOldDeliveredPOs}
+>
+  Clean Up Old Delivered POs
 </button>
 </div>
       </div>
